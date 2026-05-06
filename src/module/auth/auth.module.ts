@@ -5,20 +5,26 @@ import { Auth } from './entities/auth.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { PassportModule } from '@nestjs/passport';
+import { JwtStrategy } from './jwt-strategy';
+import { GoogleStrategy } from './google-strategy';
+import { GithubStrategy } from './github-strategy';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Auth]),
+  imports: [
+    TypeOrmModule.forFeature([Auth]),
+    PassportModule.register({ session: false }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
-      secret: process.env.SECRET_KEY,
-      signOptions: { expiresIn: '60000s' },
+        secret: process.env.SECRET_KEY,
+        signOptions: { expiresIn: '60000s' },
+      }),
     }),
-  }),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
-  exports: [JwtModule]
+  providers: [AuthService, JwtStrategy, GoogleStrategy, GithubStrategy],
+  exports: [JwtModule],
 })
 export class AuthModule {}

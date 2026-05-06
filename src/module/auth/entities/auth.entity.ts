@@ -2,7 +2,7 @@
 import { BaseEntity } from 'src/database/entities/base.entity';
 import { Article } from 'src/module/article/entities/article.entity';
 import { Tag } from 'src/module/tag/entities/tag.entity';
-import { Roles } from 'src/shared/enums/roles.enum';
+import { RolesUser } from 'src/shared/enums/roles.enum';
 import { Column, CreateDateColumn, DeleteDateColumn, Entity, JoinColumn, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
 
@@ -18,14 +18,26 @@ export class Auth extends BaseEntity{
   @Column()
   password!: string;
 
-  @Column({type: "enum", enum: Roles, default: Roles.USER})
-  role!: Roles;
+  @Column({type: "enum", enum: RolesUser, default: RolesUser.USER})
+  role!: RolesUser;
 
   @Column()
   otp!: string;
 
   @Column({type: 'bigint'})
   otpTime!: number;
+
+  @Column({ nullable: true })
+  firstName?: string;
+
+  @Column({ nullable: true })
+  lastName?: string;
+
+  @Column({ nullable: true })
+  profilePicture?: string;
+
+  @Column({ nullable: true })
+  accessToken?: string;
 
   // relations
   @OneToMany(() => Article, (article) => article.author,)

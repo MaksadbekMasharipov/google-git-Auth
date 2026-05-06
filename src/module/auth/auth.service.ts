@@ -1,11 +1,10 @@
-import { BadRequestException, Body, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
 import { Auth } from './entities/auth.entity';
 import * as bcrypt from 'bcrypt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import nodemailer from 'nodemailer';
+import * as nodemailer from 'nodemailer';
 import { VerifyDto } from './dto/verify.dto';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
@@ -25,7 +24,8 @@ export class AuthService {
     });
   }  // data base bilan bog'lab beradi va nodemailer ni sozlaydi
 
-  
+    // Google login
+
 
     // register
   async register(createAuthDto: CreateAuthDto) {
@@ -114,9 +114,70 @@ export class AuthService {
 
       await this.authRepo.update(foundedUser.id, {otp, otpTime: time});
 
-    return {message: "Please check your email for the OTP."};
-  }else{
-    return {message: "Wrong password."};
+      return {message: "Please check your email for the OTP."};
+    } else {
+      return {message: "Wrong password."};
+    }
   }
+
+  async googleLogin(req: any) {
+    if (!req.user) {
+      throw new UnauthorizedException('Google authentication failed');
+    }
+    return this.handleOAuthLogin(req.user);
+  }
+
+  async githubLogin(req: any) {
+    if (!req.user) {
+      throw new UnauthorizedException('GitHub authentication failed');
+    }
+    return this.handleOAuthLogin(req.user);
+  }
+
+  private async handleOAuthLogin(userProfile: any) {
+    const email = userProfile.email;
+    if (!email) {
+      throw new BadRequestException('OAuth provider did not return an email');
+    }
+
+    let user = await this.authRepo.findOne({ where: { email } });
+
+    if (!user) {
+      const randomPassword = Math.random().toString(36).slice(-12);
+      const hashPassword = await bcrypt.hash(randomPassword, 10);
+      const username = userProfile.username || email.split('@')[0];
+
+      user = this.authRepo.create({
+        username,
+        email,
+        password: hashPassword,
+        otp: '',
+        otpTime: 0,
+        firstName: userProfile.firstName || userProfile.displayName || '',
+        lastName: userProfile.lastName || '',
+        profilePicture: userProfile.profilePicture || userProfile.picture || '',
+        accessToken: userProfile.accessToken || '',
+      });
+      await this.authRepo.save(user);
+    } else {
+      user.firstName = userProfile.firstName || user.firstName;
+      user.lastName = userProfile.lastName || user.lastName;
+      user.profilePicture = userProfile.profilePicture || userProfile.picture || user.profilePicture;
+      user.accessToken = userProfile.accessToken || user.accessToken;
+      await this.authRepo.save(user);
+    }
+
+    const payload = { sub: user.id, username: user.username, role: user.role };
+    return {
+      access_token: await this.jwtService.signAsync(payload),
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profilePicture: user.profilePicture,
+      },
+    };
   }
 }

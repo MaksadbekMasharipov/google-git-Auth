@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, UseInterceptors, UploadedFile, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, UseInterceptors, UploadedFile, UseGuards, Query } from '@nestjs/common';
 import { ArticleService } from './article.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
@@ -12,6 +12,7 @@ import { AuthGuard } from 'src/common/guards/auth-guards';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorators';
 import { RolesUser } from 'src/shared/enums/roles.enum';
+import { QueryDto } from './dto/query.dto';
 
 @ApiBearerAuth("JWT-Auth")
 @ApiInternalServerErrorResponse({ description: "internal server error" })
@@ -19,28 +20,28 @@ import { RolesUser } from 'src/shared/enums/roles.enum';
 export class ArticleController {
   constructor(private readonly articleService: ArticleService) {}
 
-  // Post
-  @UseGuards(AuthGuard, RolesGuard) // token tekshiradi
-  @Roles(RolesUser.ADMIN, RolesUser.SUPER_ADMIN) // role tekshiradi
-  @ApiResponse({status: 201, description: "Created"})
-  @ApiBody({ type: CreateArticleFileDto })
-  @ApiConsumes("multipart/form-data")
-  @Post()
-  @UseInterceptors(
-    FileInterceptor("file", {
-      storage: diskStorage({
-          destination: path.join(process.cwd(), "uploads"),
-          filename: (req, file, cb) => {
-            const uniqueSuffix = `${file.originalname}${Date.now()}` // asosiy nomni olib, unique atadi
-            const ext = path.extname(file.originalname)  // nuqtadan keyingi so'zlarni oladi - .mp4, .png
-            cb(null, `${uniqueSuffix}${ext}`)
-          }
-      })
-    })
-  )
-  create(@Body() createArticleDto: CreateArticleDto, @UploadedFile() file: Express.Multer.File) {
-    return this.articleService.create(createArticleDto, file);
-  }
+  // // Post
+  // @UseGuards(AuthGuard, RolesGuard) // token tekshiradi
+  // @Roles(RolesUser.ADMIN, RolesUser.SUPER_ADMIN) // role tekshiradi
+  // @ApiResponse({status: 201, description: "Created"})
+  // @ApiBody({ type: CreateArticleFileDto })
+  // @ApiConsumes("multipart/form-data")
+  // @Post()
+  // @UseInterceptors(
+  //   FileInterceptor("file", {
+  //     storage: diskStorage({
+  //         destination: path.join(process.cwd(), "uploads"),
+  //         filename: (req, file, cb) => {
+  //           const uniqueSuffix = `${file.originalname}${Date.now()}` // asosiy nomni olib, unique atadi
+  //           const ext = path.extname(file.originalname)  // nuqtadan keyingi so'zlarni oladi - .mp4, .png
+  //           cb(null, `${uniqueSuffix}${ext}`)
+  //         }
+  //     })
+  //   })
+  // )
+  // create(@Body() createArticleDto: CreateArticleDto, @UploadedFile() file: Express.Multer.File) {
+  //   return this.articleService.create(createArticleDto, file);
+  // }
 
 
   // Get all
@@ -50,8 +51,8 @@ export class ArticleController {
   })
   @HttpCode(200)
   @Get()
-  findAll() {
-    return this.articleService.findAll();
+  findAll(@Query() queryDto: QueryDto) {
+    return this.articleService.findAll(queryDto);
   }
 
   

@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Article } from './entities/article.entity';
 import { Tag } from '../tag/entities/tag.entity';
+import { QueryDto } from './dto/query.dto';
 
 
 
@@ -35,8 +36,38 @@ export class ArticleService {
 
 
   // get all
-  async findAll(): Promise<Article[]> {
-    return await this.articleRepo.find();
+  async findAll(queryDto: QueryDto): Promise<{
+    totalPage: number;
+    prev: { page: number; limit: number } | undefined;
+    next: { page: number; limit: number } | undefined;
+    data: Article[];
+  }> {
+    const { page = 1, limit = 10, search } = queryDto;
+
+    const queryBuilder = this.articleRepo.createQueryBuilder("article")
+      .leftJoinAndSelect("article.tags", "tag")
+      .where("article.deletedAt IS NULL")
+
+    if (search) {
+      queryBuilder.andWhere(
+        "article.title ILIKE :search OR article.content ILIKE :search or tags.name ILIKE :search", 
+        { search: `%${search}%` });
+    }
+
+    const result = await queryBuilder
+      .orderBy("article.createdAt", "DESC")
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getMany()
+
+    const total = await queryBuilder.getCount();
+
+    return {
+      totalPage: Math.ceil(total / limit),
+      prev: page > 1 ? { page: page - 1, limit } : undefined,
+      next: page < Math.ceil(total / limit) ? { page: page + 1, limit } : undefined,
+      data: result,
+    }
   }
 
 

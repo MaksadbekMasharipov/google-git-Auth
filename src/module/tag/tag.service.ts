@@ -13,12 +13,15 @@ export class TagService {
   async create(createTagDto: CreateTagDto, userId: any) {
     const foundedTag = await this.tagRepo.findOne({ where: { name: createTagDto.name } });
 
-    if (foundedTag) throw new BadRequestException("Tag already exists");
+    if (foundedTag) throw new BadRequestException('Tag already exists');
 
-    const tag = this.tagRepo.create(createTagDto, createdBy: userId);
+    const tag = this.tagRepo.create({
+      ...createTagDto,
+      createdBy: { id: userId } as any,
+    });
     await this.tagRepo.save(tag);
 
-    return { message: "Tag created successfully" };
+    return { message: 'Tag created successfully' };
   }
 
 
